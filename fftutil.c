@@ -174,6 +174,26 @@ static inline void applyWindow(q15_t *src, const q15_t *window, uint16_t len) {
   }
 }
 
+static inline int fastSqrt(int val)
+{
+    int r = 0;
+    int shift;
+    for(shift = 0; shift < 32; shift += 2)
+    {
+        int x = 0x40000000l >> shift;
+        if(x + r <= val)
+        {
+            val -= x + r;
+            r = (r >> 1) | x;
+        }
+        else
+        {
+            r = r >> 1;
+        }
+    }
+    return r;
+}
+
 int ZeroFFT(q15_t *source, uint16_t length) {
   uint16_t twidCoefModifier;
   uint16_t bitRevFactor;
@@ -312,10 +332,16 @@ int ZeroFFT(q15_t *source, uint16_t length) {
   pSrc = source;
   pOut = scratchData;
   for (int i = 0; i < length; i++) {
-    q15_t val = *pOut++;
-    uint32_t v = abs(val);
-    *pSrc++ = v;
-    pOut++; // discard imaginary phase val
+    q15_t valReal, valImagin;
+    
+    valReal = *pOut;
+    pOut++;
+    valImagin = *pOut;
+    pOut++;
+    
+    //calc magnitude
+    int mag = fastSqrt(valReal * valReal + valImagin * valImagin);
+    *pSrc++ = mag;
   }
 
   return 0;
